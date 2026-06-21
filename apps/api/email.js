@@ -17,11 +17,12 @@ async function getTransporter() {
   if (_transporter) return _transporter;
 
   if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-    console.log('\\n📧 Using production SMTP settings:', process.env.SMTP_HOST);
+    console.log('\n📧 Using production SMTP settings:', process.env.SMTP_HOST);
     _transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: process.env.SMTP_PORT || 587,
       secure: process.env.SMTP_PORT == 465, // true for 465, false for other ports
+      family: 4, // Force IPv4 to bypass Render's ENETUNREACH bug
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
