@@ -24,12 +24,10 @@ services:
     name: vendor-apex-web
     runtime: static
     rootDir: apps/web
-    buildCommand: npm install && npm run build
-    staticPublishPath: dist
+    buildCommand: ""
+    staticPublishPath: public
     routes:
       - type: rewrite
         source: /*
         destination: /index.html
-    envVars:
-      - key: VITE_API_URL
-        value: https://vendor-apex-api.onrender.com/api
+

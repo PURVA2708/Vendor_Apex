@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="VendorBridge — End-to-end Procurement & Vendor Management ERP. Manage RFQs, quotations, approvals, purchase orders and invoices in one system.">
+<title>VendorBridge — Procurement & Vendor Management ERP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/frontend/css/style.css">
+</head>
+<body>
+
+<!-- ================= AUTH ================= -->
+<div id="auth">
+  <div class="au-left">
+    <div class="brand rv" style="--d:0ms"><div class="bm">V</div><div><b>VendorBridge</b><span>PROCUREMENT&nbsp;ERP</span></div></div>
+    <h1>
+      <span class="line-mask" style="--d:120ms"><span>Procurement that</span></span>
+      <span class="line-mask" style="--d:220ms"><span>doesn't leak <span class="red">money,</span></span></span>
+      <span class="line-mask" style="--d:320ms"><span>time, or paper trails.</span></span>
+    </h1>
+    <p class="lead rv" style="--d:480ms">One system for the full purchasing chain — <b>vendors, RFQs, quotations, approvals, purchase orders and invoices</b> — with role-based access and a complete audit log.</p>
+    <div class="chain rv" style="--d:600ms">
+      <span>RFQ</span><span>QUOTE</span><span>COMPARE</span><span>APPROVE</span><span>PO</span><span>INVOICE ✓</span>
+    </div>
+    <div class="live-card rv" style="--d:740ms">
+      <div class="lc-top"><span>vendorbridge / live-pipeline</span><span id="lcPct">FY 2026–27</span></div>
+      <div class="lc-grid">
+        <div class="lc-cell"><div class="k" style="--dot:var(--red)"><i></i>OPEN RFQS</div><div class="v" data-cu="3">0</div></div>
+        <div class="lc-cell"><div class="k" style="--dot:var(--amber)"><i></i>QUOTES IN</div><div class="v" data-cu="4">0</div></div>
+        <div class="lc-cell"><div class="k" style="--dot:var(--green)"><i></i>SPEND <small>(₹L)</small></div><div class="v green" data-cu="14.6" data-dec="1">0</div></div>
+      </div>
+      <div class="lc-ticker">
+        <div><span class="ok">✓</span> 3 quotations received on RFQ-1024</div>
+        <div><span class="ok">✓</span> PO-2026-0001 auto-created · Zenith Electronics</div>
+        <div><span class="ok">✓</span> INV-2026-0001 emailed · ₹14,63,200</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="au-right">
+    <div class="au-card rv" style="--d:260ms">
+      <div class="au-tabs">
+        <button class="au-tab on" id="tabLogin" onclick="authTab('login')">Log in</button>
+        <button class="au-tab" id="tabSignup" onclick="authTab('signup')">Create account</button>
+        <i class="au-ind" id="authInd"></i>
+      </div>
+      <div class="au-body">
+
+        <!-- ── LOGIN ── -->
+        <div class="au-view on" id="v-login">
+          <div class="f rv" style="--d:40ms" id="f_lemail"><label>Work Email</label>
+            <input id="l_email" placeholder="you@company.com" autocomplete="email" type="email">
+            <div class="err-t">ENTER A VALID EMAIL</div></div>
+          <div class="f rv" style="--d:85ms" id="f_lpass"><label>Password <a onclick="authView('forgot')">Forgot?</a></label>
+            <div class="pw-wrap"><input id="l_pass" placeholder="your password" type="password" autocomplete="current-password">
+              <button type="button" onclick="togglePw('l_pass',this)">SHOW</button></div>
+            <div class="err-t">WRONG PASSWORD</div></div>
+          <button class="btn btn-dark rv" style="width:100%;justify-content:center;--d:130ms" id="btnLogin" onclick="doLogin()">Sign in <span class="ar">›</span></button>
+          <div class="demo-row rv" style="--d:180ms">
+            <button class="demo-chip" onclick="fillDemo('officer')">📋 Officer</button>
+            <button class="demo-chip" onclick="fillDemo('manager')">✅ Manager</button>
+            <button class="demo-chip" onclick="fillDemo('vendor')">🏭 Vendor</button>
+            <button class="demo-chip" onclick="fillDemo('admin')">⚙️ Admin</button>
+          </div>
+        </div>
+
+        <!-- ── SIGNUP ── -->
+        <div class="au-view" id="v-signup">
+          <div class="f rv" style="--d:30ms" id="f_sname"><label>Full name / Company</label>
+            <input id="s_name" placeholder="e.g. Riya Shah  ·  or  Shah Traders"><div class="err-t">NAME IS REQUIRED</div></div>
+          <div class="f rv" style="--d:70ms" id="f_semail"><label>Work Email</label>
+            <input id="s_email" placeholder="you@company.com" type="email"><div class="err-t">ENTER A VALID EMAIL</div></div>
+          <div class="frow rv" style="--d:110ms">
+            <div class="f" id="f_spass"><label>Password</label>
+              <div class="pw-wrap"><input id="s_pass" placeholder="min 6 chars" type="password">
+                <button type="button" onclick="togglePw('s_pass',this)">SHOW</button></div>
+              <div class="err-t">MIN 6 CHARACTERS</div></div>
+            <div class="f" id="f_spass2"><label>Confirm</label>
+              <input id="s_pass2" placeholder="repeat it" type="password">
+              <div class="err-t">PASSWORDS DON'T MATCH</div></div>
+          </div>
+          <div class="f rv" style="--d:145ms"><label>I am joining as</label>
+            <select id="s_role" onchange="document.getElementById('vendorExtra').style.display=this.value==='vendor'?'block':'none'">
+              <option value="officer">Procurement Officer</option>
+              <option value="manager">Manager / Approver</option>
+              <option value="vendor">Vendor (supplier)</option>
+            </select></div>
+          <div id="vendorExtra" style="display:none">
+            <div class="f" id="f_sgst"><label>GST Number</label>
+              <input id="s_gst" maxlength="15" placeholder="24AAPCA1234F1Z5"><div class="err-t">INVALID GST (15 CHARS)</div></div>
+          </div>
+          <button class="btn btn-dark rv" style="width:100%;justify-content:center;--d:190ms" id="btnSignup" onclick="doSignup()">Create account <span class="ar">›</span></button>
+          <div class="au-note rv" style="--d:240ms">A welcome email will be sent to your inbox.<br>Vendors get a supplier portal · staff accounts are activated instantly.</div>
+        </div>
+
+        <!-- ── FORGOT PASSWORD — 3-step ── -->
+        <div class="au-view" id="v-forgot">
+          <!-- Step dots -->
+          <div class="steps-dots rv" style="--d:20ms">
+            <i id="fd1" class="on"></i><i id="fd2"></i><i id="fd3"></i>
+          </div>
+
+          <!-- Step 1: enter email -->
+          <div id="fstep1">
+            <h3 class="rv" style="font-size:16px;margin-bottom:4px;--d:40ms">Reset password</h3>
+            <p class="t-muted rv" style="font-size:13px;margin-bottom:18px;--d:70ms">Enter your account email — we'll send a 6-digit code.</p>
+            <div class="f rv" style="--d:100ms" id="f_femail"><label>Account Email</label>
+              <input id="fp_email" type="email" placeholder="you@company.com">
+              <div class="err-t">CHECK EMAIL ADDRESS</div></div>
+            <button class="btn btn-dark rv" style="width:100%;justify-content:center;--d:140ms" id="btnFpSend" onclick="fpSend()">Send reset code <span class="ar">›</span></button>
+            <div class="au-note rv" style="--d:170ms"><a class="link" onclick="authView('login')">← Back to login</a></div>
+          </div>
+
+          <!-- Step 2: enter OTP -->
+          <div id="fstep2" style="display:none">
+            <div class="otp-header rv" style="--d:20ms">
+              <div class="otp-icon">✉</div>
+              <h3 style="font-size:16px;margin:10px 0 4px">Check your inbox</h3>
+              <p class="t-muted" style="font-size:13px;margin-bottom:18px">6-digit code sent to<br><b id="fpEmailShow"></b></p>
+            </div>
+            <div class="f rv" style="--d:60ms" id="f_fcode">
+              <div class="code-row">
+                <input id="fp0" maxlength="1" oninput="cNext(this,'fp',0)" onkeydown="cPrevFp(event,0)">
+                <input id="fp1" maxlength="1" oninput="cNext(this,'fp',1)" onkeydown="cPrevFp(event,1)">
+                <input id="fp2" maxlength="1" oninput="cNext(this,'fp',2)" onkeydown="cPrevFp(event,2)">
+                <input id="fp3" maxlength="1" oninput="cNext(this,'fp',3)" onkeydown="cPrevFp(event,3)">
+                <input id="fp4" maxlength="1" oninput="cNext(this,'fp',4)" onkeydown="cPrevFp(event,4)">
+                <input id="fp5" maxlength="1" oninput="cNext(this,'fp',5)" onkeydown="cPrevFp(event,5)">
+              </div>
+              <div class="err-t">INCORRECT CODE — CHECK YOUR EMAIL</div>
+            </div>
+            <button class="btn btn-dark rv" style="width:100%;justify-content:center;--d:100ms" id="btnFpVerify" onclick="fpVerify()">Verify code <span class="ar">›</span></button>
+            <div class="au-note rv" style="--d:130ms">
+              <a class="link" id="fpResend" onclick="fpResend()">Resend code</a> &nbsp;·&nbsp;
+              <a class="link" onclick="fpStep(1)">← Change email</a>
+            </div>
+          </div>
+
+          <!-- Step 3: new password -->
+          <div id="fstep3" style="display:none">
+            <h3 class="rv" style="font-size:16px;margin-bottom:4px;--d:20ms">Set new password</h3>
+            <p class="t-muted rv" style="font-size:13px;margin-bottom:18px;--d:50ms">Choose a strong password for your account.</p>
+            <div class="f rv" style="--d:80ms" id="f_fnew"><label>New Password</label>
+              <div class="pw-wrap"><input id="fp_new" placeholder="min 6 characters" type="password">
+                <button type="button" onclick="togglePw('fp_new',this)">SHOW</button></div>
+              <div class="err-t">MIN 6 CHARACTERS</div></div>
+            <div class="f rv" style="--d:110ms" id="f_fnew2"><label>Confirm Password</label>
+              <input id="fp_new2" placeholder="repeat it" type="password">
+              <div class="err-t">PASSWORDS DON'T MATCH</div></div>
+            <button class="btn btn-dark rv" style="width:100%;justify-content:center;--d:140ms" id="btnFpReset" onclick="fpReset()">Update password <span class="ar">›</span></button>
+          </div>
+
+          <!-- Done -->
+          <div id="fstepOk" style="display:none;text-align:center;padding:10px 0">
+            <div class="ok-burst">✓</div>
+            <h3 style="margin-bottom:8px">Password updated!</h3>
+            <p class="t-muted" style="font-size:13px;margin-bottom:20px">A confirmation email has been sent to you.</p>
+            <button class="btn btn-dark" style="width:100%;justify-content:center" onclick="authView('login')">Back to login <span class="ar">›</span></button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ================= APP ================= -->
+<div id="app">
+  <div class="sidebar-scrim" id="sbScrim" onclick="toggleSidebar()"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><div class="bm">V</div><div><b>VendorBridge</b><span>PROCUREMENT&nbsp;ERP</span></div></div>
+    <div class="org-card"><div class="bm" style="font-size:13px">VB</div>
+      <div><b>VendorBridge Corp</b><span>● LIVE · FY 2026–27</span></div></div>
+    <div id="sbnav"></div>
+    <div class="sb-user">
+      <div class="avatar" id="uAvatar"></div>
+      <div><b id="uName"></b><span id="uRole"></span></div>
+      <button onclick="logout()">EXIT</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <button class="hamburger" onclick="toggleSidebar()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+      </button>
+      <div class="crumb" id="crumb">vendorbridge / <b>dashboard</b></div>
+      <div class="right">
+        <span class="kicker" id="roleChip"></span>
+        <button class="bell" onclick="toggleNotif(event)">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+          <span class="dot" id="notifCount">0</span>
+        </button>
+      </div>
+    </div>
+    <div class="notif-pop" id="notifPop"><h4>Notifications</h4><div id="notifList"></div></div>
+    <div class="content" id="content">
+      <div class="page" id="pg-dashboard"></div>
+      <div class="page" id="pg-vendors"></div>
+      <div class="page" id="pg-rfqs"></div>
+      <div class="page" id="pg-rfq-create"></div>
+      <div class="page" id="pg-vendor-rfqs"></div>
+      <div class="page" id="pg-quote"></div>
+      <div class="page" id="pg-compare"></div>
+      <div class="page" id="pg-approvals"></div>
+      <div class="page" id="pg-approval-detail"></div>
+      <div class="page" id="pg-pos"></div>
+      <div class="page" id="pg-invoice"></div>
+      <div class="page" id="pg-logs"></div>
+      <div class="page" id="pg-reports"></div>
+      <div class="page" id="pg-users"></div>
+    </div>
+  </div>
+</div>
+
+<!-- vendor modal -->
+<div class="modal-bg" id="vendorModal">
+  <div class="modal">
+    <div class="card-h"><div><div class="kicker"><b>01</b> · VENDOR REGISTRY</div><h3 style="margin-top:4px">Register vendor</h3></div>
+      <button class="x" onclick="closeModal('vendorModal')">×</button></div>
+    <div class="card-b">
+      <div class="frow">
+        <div class="field"><label>Company name *</label><input id="vm_name" placeholder="e.g. Apex Furniture Pvt Ltd"></div>
+        <div class="field"><label>Category *</label>
+          <select id="vm_cat"><option>Furniture</option><option>Electronics</option><option>Stationery</option><option>Services</option><option>Raw Material</option></select></div>
+      </div>
+      <div class="field"><label>GST number *</label><input id="vm_gst" maxlength="15" placeholder="22AAAAA0000A1Z5"><div class="hint">15 characters — validated with regex</div></div>
+      <div class="frow">
+        <div class="field"><label>Email *</label><input id="vm_email" placeholder="sales@vendor.com"></div>
+        <div class="field"><label>Phone</label><input id="vm_phone" placeholder="+91 98xxxxxx"></div>
+      </div>
+      <button class="btn btn-dark" onclick="saveVendor()">Save vendor <span class="ar">›</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- reject modal -->
+<div class="modal-bg" id="rejectModal">
+  <div class="modal">
+    <div class="card-h"><div><div class="kicker red"><b>STOP</b> · WORKFLOW</div><h3 style="margin-top:4px">Reject request</h3></div>
+      <button class="x" onclick="closeModal('rejectModal')">×</button></div>
+    <div class="card-b">
+      <div class="field"><label>Remark (required)</label><textarea id="rejRemark" rows="3" placeholder="e.g. Budget exceeded — renegotiate delivery or price"></textarea></div>
+      <button class="btn btn-red" onclick="confirmReject()">Reject & send back</button>
+    </div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+<div id="printArea"></div>
+<script>
+  // API base URL — points to Render backend
+  const API = (function(){
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'http://localhost:3000/api';
+    }
+    return 'https://vendor-apex-api.onrender.com/api';
+  })();
+</script>
+<script src="/backend/data.js"></script>
+<script src="/frontend/js/app.js"></script>
+</body>
+</html>
