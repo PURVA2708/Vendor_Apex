@@ -10,13 +10,27 @@ let _transporter = null;
 async function getTransporter() {
   if (_transporter) return _transporter;
 
+  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    console.log('\\n📧 Using production SMTP settings:', process.env.SMTP_HOST);
+    _transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT || 587,
+      secure: process.env.SMTP_PORT == 465, // true for 465, false for other ports
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+    return _transporter;
+  }
+
   // Auto-create a free Ethereal test account (no config needed for dev).
   // Every email generates a preview URL logged to the console.
   const testAccount = await nodemailer.createTestAccount();
-  console.log('\n📧 Ethereal email account ready:');
+  console.log('\\n📧 Ethereal email account ready (DEVELOPMENT MODE):');
   console.log('   User:', testAccount.user);
   console.log('   Pass:', testAccount.pass);
-  console.log('   Preview emails at: https://ethereal.email/login\n');
+  console.log('   Preview emails at: https://ethereal.email/login\\n');
 
   _transporter = nodemailer.createTransport({
     host: 'smtp.ethereal.email',
@@ -97,18 +111,18 @@ p b{color:#121212}
 // ─────────────────────────────────────────────────────────────────────────────
 // Role helpers
 // ─────────────────────────────────────────────────────────────────────────────
-const ROLE_ICONS  = { officer:'📋', manager:'✅', vendor:'🏭', admin:'⚙️' };
+const ROLE_ICONS = { officer: '📋', manager: '✅', vendor: '🏭', admin: '⚙️' };
 const ROLE_ACCESS = {
   officer: 'Create RFQs · Compare Quotes · POs · Invoices',
   manager: 'Approvals · RFQ Overview · Reports',
-  vendor:  'RFQ Invitations · Submit Quotes · Track POs',
-  admin:   'Full System Access · Users · Audit Logs',
+  vendor: 'RFQ Invitations · Submit Quotes · Track POs',
+  admin: 'Full System Access · Users · Audit Logs',
 };
 const ROLE_DESC = {
   officer: 'You can create and manage Requests for Quotation, compare vendor quotations side-by-side, generate Purchase Orders, and process GST invoices through the full procurement lifecycle.',
   manager: 'You can review and approve procurement requests, oversee the approval workflow, and access comprehensive spending reports and analytics.',
-  vendor:  'You can respond to RFQ invitations from VendorBridge Corp, submit competitive quotations, and track the status of your Purchase Orders in real time.',
-  admin:   'You have full administrative access — manage all users, vendors, system settings and audit logs across the entire VendorBridge platform.',
+  vendor: 'You can respond to RFQ invitations from VendorBridge Corp, submit competitive quotations, and track the status of your Purchase Orders in real time.',
+  admin: 'You have full administrative access — manage all users, vendors, system settings and audit logs across the entire VendorBridge platform.',
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -116,7 +130,7 @@ const ROLE_DESC = {
 // ─────────────────────────────────────────────────────────────────────────────
 async function sendWelcomeEmail({ to, name, role, label }) {
   const icon = ROLE_ICONS[role] || '👤';
-  const now  = new Date().toLocaleDateString('en-IN', { dateStyle: 'long' });
+  const now = new Date().toLocaleDateString('en-IN', { dateStyle: 'long' });
 
   const body = `
     <div class="badge badge-red">✓ Account Activated</div>
