@@ -1,0 +1,23 @@
+{
+    "name":  "procureflow",
+    "version":  "1.0.0",
+    "private":  true,
+    "description":  "End-to-end procurement management SaaS",
+    "workspaces":  [
+                       "apps/*",
+                       "packages/*"
+                   ],
+    "scripts":  {
+                    "dev":  "turbo run dev",
+                    "build":  "turbo run build",
+                    "test":  "turbo run test",
+                    "lint":  "turbo run lint"
+                },
+    "devDependencies":  {
+                            "turbo":  "^2.0.0"
+                        },
+    "engines":  {
+                    "node":  "\u003e=20.0.0"
+                },
+    "packageManager":  "pnpm@11.5.2"
+}
