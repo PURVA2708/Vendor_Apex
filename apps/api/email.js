@@ -4,6 +4,12 @@
  * Replace createTestAccount() + transport with real SMTP for production.
  */
 const nodemailer = require('nodemailer');
+const dns = require('dns');
+
+// Force IPv4 to prevent ENETUNREACH errors on servers without IPv6 routing (like Render)
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
 
 let _transporter = null;
 
