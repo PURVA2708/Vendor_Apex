@@ -49,6 +49,23 @@ function getBearerToken(req) {
   return auth.startsWith('Bearer ') ? auth.slice(7) : null;
 }
 
+// ─── Auth Middleware ──────────────────────────────────────────────────────────
+async function requireAuth(req, res, next) {
+  const token = getBearerToken(req);
+  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+  const payload = verifyToken(token);
+  if (!payload) return res.status(401).json({ error: 'Invalid or expired token' });
+  // Attach full user to request (including vendorId)
+  try {
+    const { rows } = await pool.query('SELECT id, email, name, role, label, vendor_id FROM accounts WHERE id = $1', [payload.id]);
+    if (!rows.length) return res.status(401).json({ error: 'Account not found' });
+    req.user = { ...rows[0], vendorId: rows[0].vendor_id };
+    next();
+  } catch (e) {
+    return res.status(500).json({ error: 'Auth check failed' });
+  }
+}
+
 // ─── Labels ──────────────────────────────────────────────────────────────────
 const LABELS = {
   officer: 'Procurement Officer',
@@ -262,6 +279,15 @@ app.get('/api/health', async (req, res) => {
     res.status(500).json({ error: 'Database error' });
   }
 });
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  PROCUREMENT ROUTES
+// ══════════════════════════════════════════════════════════════════════════════
+require('./routes/state')(app, pool, requireAuth);
+require('./routes/vendors')(app, pool, requireAuth);
+require('./routes/rfqs')(app, pool, requireAuth);
+require('./routes/quotes')(app, pool, requireAuth);
+require('./routes/billing')(app, pool, requireAuth);
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;

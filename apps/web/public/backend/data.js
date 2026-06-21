@@ -2,17 +2,18 @@
 const fmt = n => '₹' + Number(n).toLocaleString('en-IN');
 const today = new Date();
 const dstr = d => new Date(d).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
-const ago = m => m===0?'just now':(m<60? m+' min ago' : m<1440? Math.round(m/60)+' hr ago' : Math.round(m/1440)+' d ago');
+const ago  = m => m===0?'just now':(m<60? m+' min ago' : m<1440? Math.round(m/60)+' hr ago' : Math.round(m/1440)+' d ago');
 function addDays(n){ const d=new Date(); d.setDate(d.getDate()+n); return d; }
 const $ = id => document.getElementById(id);
 
+// S is the runtime state — pre-filled with demo data, merged with live DB on login
 const S = {
   user:null,
   accounts:[
-    {email:'officer@vb.com', pass:'officer123', name:'Raj Mehta',  role:'officer', label:'Procurement Officer'},
-    {email:'manager@vb.com', pass:'manager123', name:'Meera Iyer', role:'manager', label:'Manager / Approver'},
-    {email:'vendor1@vb.com', pass:'vendor123',  name:'Apex Furniture', role:'vendor', label:'Vendor', vendorId:1},
-    {email:'admin@vb.com',   pass:'admin123',   name:'Arjun Rao',  role:'admin', label:'Administrator'},
+    {id:1,email:'officer@vb.com', name:'Raj Mehta',  role:'officer', label:'Procurement Officer'},
+    {id:2,email:'manager@vb.com', name:'Meera Iyer', role:'manager', label:'Manager / Approver'},
+    {id:3,email:'v1@vendor.com',  name:'Apex Furniture', role:'vendor', label:'Vendor', vendorId:1},
+    {id:4,email:'admin@vb.com',   name:'Arjun Rao',  role:'admin', label:'Administrator'},
   ],
   vendors:[
     {id:1,name:'Apex Furniture Pvt Ltd',cat:'Furniture',gst:'24AAPCA1234F1Z5',email:'sales@apexfurniture.in',phone:'+91 98250 11223',status:'active',rating:4.5},
@@ -39,15 +40,15 @@ const S = {
   pos:[ {id:1,num:'PO-2026-0001',rfq:1025,quote:104,vendor:4,total:1240000,status:'INVOICED',at:addDays(-9)} ],
   invoices:[ {id:1,num:'INV-2026-0001',po:1,subtotal:1240000,tax:223200,total:1463200,emailed:true,status:'PAID',at:addDays(-8)} ],
   logs:[
-    {who:'Raj Mehta',what:'created RFQ #RFQ-1026 “A4 Printer Paper — 500 reams”',min:1440,c:'#121212'},
+    {who:'Raj Mehta',what:'created RFQ #RFQ-1026 "A4 Printer Paper — 500 reams"',min:1440,c:'#121212'},
     {who:'Bharat Office Co',what:'submitted quotation for RFQ-1024 (₹1,10,000)',min:1500,c:'#B45309'},
     {who:'Crestwood Supplies',what:'submitted quotation for RFQ-1024 (₹90,000)',min:1560,c:'#B45309'},
     {who:'Apex Furniture',what:'submitted quotation for RFQ-1024 (₹1,00,000)',min:2880,c:'#B45309'},
     {who:'System',what:'emailed INV-2026-0001 to biz@zenithelec.in',min:11520,c:'#E11900'},
     {who:'System',what:'generated invoice INV-2026-0001 (₹14,63,200)',min:11530,c:'#E11900'},
     {who:'System',what:'auto-created PO-2026-0001 for Zenith Electronics',min:12950,c:'#0B8A4B'},
-    {who:'Meera Iyer',what:'APPROVED quotation for RFQ-1025 — “Within IT budget. Proceed.”',min:12960,c:'#0B8A4B'},
-    {who:'Raj Mehta',what:'created RFQ #RFQ-1025 “20 Developer Laptops”',min:17280,c:'#121212'},
+    {who:'Meera Iyer',what:'APPROVED quotation for RFQ-1025 — "Within IT budget. Proceed."',min:12960,c:'#0B8A4B'},
+    {who:'Raj Mehta',what:'created RFQ #RFQ-1025 "20 Developer Laptops"',min:17280,c:'#121212'},
   ],
   notifs:[
     {t:'3 quotations received for RFQ-1024 — ready to compare',min:1500},
@@ -62,12 +63,71 @@ const S = {
 const STATUS = {
   DRAFT:['b-grey','Draft'], SENT:['b-ink','Sent to vendors'], QUOTED:['b-amber','Quotes received'],
   UNDER_APPROVAL:['b-amber','Under approval'], APPROVED:['b-green','Approved'], REJECTED:['b-red','Rejected'],
-  PO_CREATED:['b-ink','PO created'], INVOICED:['b-red','Invoiced'], PAID:['b-green','Paid'],
+  PO_CREATED:['b-ink','PO created'], PO_GENERATED:['b-ink','PO Generated'],
+  INVOICED:['b-red','Invoiced'], PAID:['b-green','Paid'], ISSUED:['b-ink','Issued'],
   SUBMITTED:['b-ink','Submitted'], SELECTED:['b-amber','Sent for approval'], CREATED:['b-ink','Created'],
   active:['b-green','Active'], inactive:['b-grey','Inactive']
 };
-const badge = s => { const [c,l]=STATUS[s]||['b-grey',s]; return `<span class="badge ${c}">${l}</span>`; };
-const vById = id => S.vendors.find(v=>v.id===id);
+const badge  = s => { const [c,l]=STATUS[s]||['b-grey',s]; return `<span class="badge ${c}">${l}</span>`; };
+const vById  = id => S.vendors.find(v=>v.id===id);
 const qTotal = q => q.items.reduce((a,i)=>a+i.price*i.qty,0);
-const stars = r => '★'.repeat(Math.round(r))+'☆'.repeat(5-Math.round(r))+` <span style="color:var(--muted)">${r}</span>`;
+const stars  = r => '★'.repeat(Math.round(r))+'☆'.repeat(5-Math.round(r))+` <span style="color:var(--muted)">${r}</span>`;
 const ROLECOLOR = {officer:'#121212',manager:'#B45309',vendor:'#E11900',admin:'#0B8A4B'};
+
+// ── Auth header helper ──────────────────────────────────────────────────────
+function authHeaders() {
+  const token = localStorage.getItem('vb_token') || '';
+  return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token };
+}
+
+// ── Merge live DB data on top of demo data (non-blocking) ─────────────────
+// Runs after login; any real DB records overlay the demo seed.
+async function loadState() {
+  try {
+    const r = await fetch(`${API}/state`, { headers: authHeaders() });
+    if (!r.ok) return; // silently keep demo data if API fails
+    const d = await r.json();
+
+    // Merge: real DB data wins; demo data stays as a fallback visual
+    if (d.vendors   && d.vendors.length)   S.vendors   = d.vendors;
+    if (d.rfqs      && d.rfqs.length) {
+      S.rfqs = d.rfqs.map(r => {
+        r.createdBy     = r.createdBy     || r.created_by    || '';
+        r.selectedQuote = r.selectedQuote !== undefined ? r.selectedQuote : r.selected_quote;
+        r.items   = r.items   || [];
+        r.vendors = r.vendors || [];
+        return r;
+      });
+    }
+    if (d.quotes && d.quotes.length) {
+      S.quotes = d.quotes.map(q => {
+        q.rfq    = q.rfq    || q.rfq_id;
+        q.vendor = q.vendor || q.vendor_id;
+        q.at     = q.at     || q.created_at;
+        q.items  = q.items  || [];
+        return q;
+      });
+    }
+    if (d.approvals && d.approvals.length) S.approvals = d.approvals;
+    if (d.pos       && d.pos.length)       S.pos       = d.pos;
+    if (d.invoices  && d.invoices.length)  S.invoices  = d.invoices;
+    if (d.logs      && d.logs.length)      S.logs      = d.logs;
+    if (d.notifs    && d.notifs.length)    S.notifs    = d.notifs;
+    if (d.accounts  && d.accounts.length)  S.accounts  = d.accounts;
+
+    // Rebuild pending from real data
+    S.pending = S.quotes.filter(q => q.status === 'SELECTED').map(q => q.id);
+
+    // Bump sequence counters above DB max IDs to avoid conflicts
+    const maxRfq  = Math.max(...S.rfqs.map(x=>x.id),    1026);
+    const maxQ    = Math.max(...S.quotes.map(x=>x.id),  104);
+    const maxPo   = Math.max(...S.pos.map(x=>x.id),     1);
+    const maxInv  = Math.max(...S.invoices.map(x=>x.id),1);
+    const maxAppr = Math.max(...S.approvals.map(x=>x.id),1);
+    const maxV    = Math.max(...S.vendors.map(x=>x.id), 5);
+    S.seq = { rfq: maxRfq+1, quote: maxQ+1, po: maxPo+1, inv: maxInv+1, appr: maxAppr+1, vendor: maxV+1 };
+
+  } catch(e) {
+    console.warn('API offline — running on demo data', e.message);
+  }
+}

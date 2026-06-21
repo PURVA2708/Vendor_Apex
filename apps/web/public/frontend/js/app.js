@@ -293,6 +293,8 @@ function enterApp(user){
   av.style.background=ROLECOLOR[acc.role];
   buildNav(); go('dashboard'); renderNotifs();
   toast(`Signed in as ${acc.name} — ${acc.label}`);
+  // Merge real DB data in background — UI stays instant on demo data
+  loadState().then(() => { buildNav(); go('dashboard'); renderNotifs(); }).catch(()=>{});
 }
 
 // ── Logout ─────────────────────────────────────────────────────────────────
@@ -431,16 +433,23 @@ function rVendors(){
     </tbody></table></div></div>`;
 }
 function openVendorModal(){ $('vendorModal').classList.add('on'); }
-function saveVendor(){
+async function saveVendor(){
   const name=vm_name.value.trim(), gst=vm_gst.value.trim().toUpperCase(), email=vm_email.value.trim();
   if(!name||!email) return toast('Company name and email are required',1);
   if(!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gst)) return toast('Invalid GST number format (15 chars)',1);
-  S.vendors.push({id:S.seq.vendor++,name,cat:vm_cat.value,gst,email,phone:vm_phone.value||'—',status:'active',rating:4.0});
-  closeModal('vendorModal'); log(S.user.name,`registered vendor “${name}”`); notify(`Vendor “${name}” registered`);
-  toast(`Vendor “${name}” registered ✓`); rVendors(); reveal($('pg-vendors'));
+  const newV={id:S.seq.vendor++,name,cat:vm_cat.value,gst,email,phone:vm_phone.value||'—',status:'active',rating:4.0};
+  S.vendors.push(newV);
+  closeModal('vendorModal'); log(S.user.name,`registered vendor "${name}"`); notify(`Vendor "${name}" registered`);
+  toast(`Vendor "${name}" registered ✓`); rVendors(); reveal($('pg-vendors'));
+  // Persist to DB in background
+  fetch(`${API}/vendors`,{method:'POST',headers:authHeaders(),body:JSON.stringify({name,cat:vm_cat.value,gst,email,phone:vm_phone.value||'—'})}).catch(()=>{});
 }
-function toggleVendor(id){ const v=vById(id); v.status=v.status==='active'?'inactive':'active';
-  log(S.user.name,`set vendor “${v.name}” to ${v.status}`); toast(`${v.name} is now ${v.status}`); rVendors(); }
+async function toggleVendor(id){
+  const v=vById(id); v.status=v.status==='active'?'inactive':'active';
+  log(S.user.name,`set vendor "${v.name}" to ${v.status}`); toast(`${v.name} is now ${v.status}`); rVendors();
+  // Persist to DB in background
+  fetch(`${API}/vendors/${id}/status`,{method:'PUT',headers:authHeaders(),body:JSON.stringify({status:v.status})}).catch(()=>{});
+}
 
 /* ================= RFQ LIST / CREATE ================= */
 function rRfqs(){
@@ -509,7 +518,7 @@ function drawVendorChecks(){
     <input type="checkbox" ${rfqVendorsSel.has(v.id)?'checked':''} onchange="this.checked?rfqVendorsSel.add(${v.id}):rfqVendorsSel.delete(${v.id});drawVendorChecks()">
     <div><b>${v.name}</b><span>${v.cat.toUpperCase()} · ${v.rating} ★</span></div></label>`).join('');
 }
-function createRfq(draft){
+async function createRfq(draft){
   const title=rf_title.value.trim(), dl=rf_deadline.value;
   const items=rfqItems.filter(i=>i.name&&i.qty>0).map(i=>({name:i.name,qty:+i.qty,unit:i.unit}));
   if(!title) return toast('Give the RFQ a title',1);
@@ -517,13 +526,16 @@ function createRfq(draft){
   if(!draft&&!dl) return toast('Pick a deadline',1);
   if(!draft&&rfqVendorsSel.size===0) return toast('Invite at least one vendor',1);
   const id=S.seq.rfq++;
-  S.rfqs.unshift({id,title,desc:rf_desc.value,deadline:dl?new Date(dl):addDays(7),status:draft?'DRAFT':'SENT',
-    createdBy:S.user.name,created:new Date(),items,vendors:[...rfqVendorsSel],attach:null,selectedQuote:null});
-  log(S.user.name,`created RFQ #RFQ-${id} “${title}”${draft?' (draft)':''}`);
+  const rfqObj={id,title,desc:rf_desc.value,deadline:dl?new Date(dl):addDays(7),status:draft?'DRAFT':'SENT',
+    createdBy:S.user.name,created:new Date(),items,vendors:[...rfqVendorsSel],attach:null,selectedQuote:null};
+  S.rfqs.unshift(rfqObj);
+  log(S.user.name,`created RFQ #RFQ-${id} "${title}"${draft?' (draft)':''}`);
   if(!draft) notify(`RFQ-${id} sent to ${rfqVendorsSel.size} vendor(s)`);
   toast(draft?`RFQ-${id} saved as draft`:`RFQ-${id} sent to ${rfqVendorsSel.size} vendors ✓`);
   rfqItems=[{name:'',qty:'',unit:'pcs'}]; rfqVendorsSel=new Set();
   go('rfqs');
+  // Persist to DB in background
+  if(!draft) fetch(`${API}/rfqs`,{method:'POST',headers:authHeaders(),body:JSON.stringify({title,desc:rf_desc.value,deadline:dl,items,vendors:[...rfqObj.vendors]})}).catch(()=>{});
 }
 
 /* ================= VENDOR PORTAL ================= */
@@ -574,17 +586,21 @@ function calcQuote(){
     $('ql_'+i).textContent=lt?fmt(lt):'—';});
   $('q_total').textContent=fmt(tot);
 }
-function submitQuote(editId){
+async function submitQuote(editId){
   const r=S.rfqs.find(x=>x.id===S.cur.rfq), vid=S.user.vendorId;
   const items=r.items.map((it,i)=>({name:it.name,price:+$('qp_'+i).value||0,qty:it.qty}));
   if(items.some(i=>i.price<=0)) return toast('Enter a price for every item',1);
   const days=+q_days.value; if(!days) return toast('Enter delivery days',1);
   if(editId){ const q=S.quotes.find(x=>x.id===editId); q.items=items;q.days=days;q.notes=q_notes.value;
-    log(S.user.name,`updated quotation for RFQ-${r.id} (${fmt(qTotal(q))})`,'#B45309'); toast('Quotation updated ✓'); }
+    log(S.user.name,`updated quotation for RFQ-${r.id} (${fmt(qTotal(q))})`,'#B45309'); toast('Quotation updated ✓');
+    fetch(`${API}/quotes/${editId}`,{method:'PUT',headers:authHeaders(),body:JSON.stringify({days,notes:q_notes.value,items})}).catch(()=>{});
+  }
   else{ const q={id:S.seq.quote++,rfq:r.id,vendor:vid,items,days,notes:q_notes.value,status:'SUBMITTED',at:new Date()};
     S.quotes.push(q); if(r.status==='SENT')r.status='QUOTED';
     log(S.user.name,`submitted quotation for RFQ-${r.id} (${fmt(qTotal(q))})`,'#B45309');
-    notify(`New quotation on RFQ-${r.id} from ${vById(vid)?vById(vid).name:S.user.name}`); toast('Quotation submitted ✓'); }
+    notify(`New quotation on RFQ-${r.id} from ${vById(vid)?vById(vid).name:S.user.name}`); toast('Quotation submitted ✓');
+    fetch(`${API}/quotes`,{method:'POST',headers:authHeaders(),body:JSON.stringify({rfq:r.id,days,notes:q_notes.value,items})}).catch(()=>{});
+  }
   go('vendor-rfqs');
 }
 
@@ -624,7 +640,7 @@ function rCompare(){
       </div>`;}).join('')}</div>`
     :`<div class="card rv"><div class="empty"><b>No quotations yet</b>Invited: ${r.vendors.map(v=>vById(v)?vById(v).name:'').join(', ')}.</div></div>`);
 }
-function selectQuote(qid){
+async function selectQuote(qid){
   const q=S.quotes.find(x=>x.id===qid), r=S.rfqs.find(x=>x.id===q.rfq), v=vById(q.vendor);
   S.quotes.filter(x=>x.rfq===r.id&&x.status==='SELECTED').forEach(x=>x.status='SUBMITTED');
   q.status='SELECTED'; r.status='UNDER_APPROVAL'; r.selectedQuote=qid;
@@ -633,6 +649,7 @@ function selectQuote(qid){
   notify(`RFQ-${r.id}: quotation sent for manager approval`);
   toast('Sent for approval — log in as Manager to approve ✓');
   buildNav(); rCompare(); reveal($('pg-compare')); countUp($('pg-compare'));
+  fetch(`${API}/quotes/${qid}/select`,{method:'POST',headers:authHeaders()}).catch(()=>{});
 }
 
 /* ================= APPROVALS ================= */
@@ -682,7 +699,7 @@ function rApprovalDetail(){
       <div class="tl-item" style="--tc:#E11900"><b>Awaiting your decision</b><span>now</span></div>
     </div></div></div></div></div>`;
 }
-function approve(qid){
+async function approve(qid){
   const q=S.quotes.find(x=>x.id===qid), r=S.rfqs.find(x=>x.id===q.rfq), v=vById(q.vendor);
   q.status='APPROVED'; r.status='PO_CREATED'; S.pending=S.pending.filter(x=>x!==qid);
   S.approvals.unshift({id:S.seq.appr++,quote:qid,rfq:r.id,by:S.user.name,action:'APPROVED',remark:'Approved via workflow',at:new Date()});
@@ -693,8 +710,9 @@ function approve(qid){
   notify(`${num} auto-created for ${v?v.name:''}`);
   toast(`Approved ✓ ${num} auto-created`);
   buildNav(); go('approvals');
+  fetch(`${API}/quotes/${qid}/approve`,{method:'POST',headers:authHeaders(),body:JSON.stringify({remark:'Approved via workflow'})}).catch(()=>{});
 }
-function confirmReject(){
+async function confirmReject(){
   const remark=rejRemark.value.trim(); if(!remark) return toast('A remark is required to reject',1);
   const q=S.quotes.find(x=>x.id===S.cur.quote), r=S.rfqs.find(x=>x.id===q.rfq);
   q.status='SUBMITTED'; r.status='REJECTED'; S.pending=S.pending.filter(x=>x!==q.id);
@@ -734,7 +752,7 @@ function rPos(){
   </tbody></table>`:`<div class="empty"><b>No invoices yet</b></div>`}
   </div></div>`;
 }
-function genInvoice(poId){
+async function genInvoice(poId){
   const p=S.pos.find(x=>x.id===poId);
   const subtotal=p.total, tax=Math.round(subtotal*0.18), total=subtotal+tax;
   const num='INV-2026-'+String(S.seq.inv).padStart(4,'0');
@@ -745,6 +763,8 @@ function genInvoice(poId){
   notify(`Invoice ${num} generated — ready to print/email`);
   toast(`${num} generated with 18% GST ✓`);
   openInvoice(inv.id);
+  // Persist to DB in background
+  fetch(`${API}/pos/${poId}/invoice`,{method:'POST',headers:authHeaders()}).catch(()=>{});
 }
 function openInvoice(id){ S.cur.inv=id; go('invoice'); }
 function invoiceHTML(inv){
@@ -783,13 +803,15 @@ function printInvoice(){
   log(S.user.name,`printed / downloaded ${inv.num}`,'#E11900');
   window.print();
 }
-function emailInvoice(id){
+async function emailInvoice(id){
   const inv=S.invoices.find(x=>x.id===id), p=S.pos.find(x=>x.id===inv.po), v=vById(p.vendor);
   inv.emailed=true;
   log('System',`emailed ${inv.num} to ${v?v.email:''}`,'#E11900');
   notify(`Invoice ${inv.num} emailed to ${v?v.email:''}`);
   toast(`${inv.num} sent to ${v?v.email:''} ✓`);
   rInvoice(); reveal($('pg-invoice'));
+  // Persist to DB in background
+  fetch(`${API}/invoices/${id}/email`,{method:'POST',headers:authHeaders()}).catch(()=>{});
 }
 
 /* ================= LOGS / REPORTS / USERS ================= */
