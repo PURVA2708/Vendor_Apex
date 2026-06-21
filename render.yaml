@@ -1,4 +1,5 @@
 services:
+  # ── Backend API ─────────────────────────────────────────────────────────────
   - type: web
     name: vendor-apex-api
     runtime: node
@@ -9,11 +10,26 @@ services:
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
-        sync: false   # Set manually in Render dashboard — your Supabase connection string
+        sync: false
       - key: JWT_SECRET
-        generateValue: true   # Render will auto-generate a strong secret
+        generateValue: true
       - key: FRONTEND_URL
-        sync: false   # Set to your Vercel URL e.g. https://vendor-apex.vercel.app
+        value: https://vendor-apex-web.onrender.com
       - key: PORT
-        value: 10000  # Render uses port 10000 by default
+        value: 10000
     healthCheckPath: /api/health
+
+  # ── Frontend Static Site ─────────────────────────────────────────────────────
+  - type: web
+    name: vendor-apex-web
+    runtime: static
+    rootDir: apps/web
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        value: https://vendor-apex-api.onrender.com/api
