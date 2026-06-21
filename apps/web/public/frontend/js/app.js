@@ -47,7 +47,10 @@ function togglePw(id,btn){ const i=$(id); i.type=i.type==='password'?'text':'pas
 function setErr(fid,on,msg){ const f=$(fid); if(!f)return; f.classList.toggle('err',!!on); if(msg){const e=f.querySelector('.err-t'); if(e)e.textContent=msg;} }
 const emailOk = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
-const API = 'http://localhost:3000/api';
+const API = (window.__API_URL__ && !window.__API_URL__.includes('%VITE_API_URL%'))
+  ? window.__API_URL__
+  : 'http://localhost:3000/api';
+
 
 function btnLoad(id, loading, label){
   const b=$(id); if(!b) return;

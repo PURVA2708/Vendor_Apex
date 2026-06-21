@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: vendor-apex-api
+    runtime: node
+    rootDir: apps/api
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false   # Set manually in Render dashboard — your Supabase connection string
+      - key: JWT_SECRET
+        generateValue: true   # Render will auto-generate a strong secret
+      - key: FRONTEND_URL
+        sync: false   # Set to your Vercel URL e.g. https://vendor-apex.vercel.app
+      - key: PORT
+        value: 10000  # Render uses port 10000 by default
+    healthCheckPath: /api/health

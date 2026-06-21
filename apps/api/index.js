@@ -7,8 +7,22 @@ const { Pool } = require('pg');
 const { sendWelcomeEmail, sendOtpEmail, sendPasswordUpdatedEmail } = require('./email');
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: function (origin, callback) {
+    const allowed = [
+      process.env.FRONTEND_URL,          // e.g. https://vendor-apex.vercel.app
+      'http://localhost:5173',
+      'http://localhost:4173',
+      'http://localhost:3000',
+    ].filter(Boolean);
+    // Allow requests with no origin (mobile apps, curl, Postman)
+    if (!origin || allowed.some(a => origin.startsWith(a))) return callback(null, true);
+    callback(new Error('Not allowed by CORS: ' + origin));
+  },
+  credentials: true,
+}));
 app.use(express.json());
+
 
 // ─── PostgreSQL ───────────────────────────────────────────────────────────────
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
