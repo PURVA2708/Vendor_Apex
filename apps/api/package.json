@@ -7,7 +7,8 @@
     "dev": "node --watch index.js",
     "start": "node index.js",
     "migrate": "node migrate.js",
-    "seed": "node seed.js"
+    "seed": "node seed.js",
+    "verify": "node verify.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",
