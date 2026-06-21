@@ -24,8 +24,8 @@ services:
     name: vendor-apex-web
     runtime: static
     rootDir: apps/web
-    buildCommand: ""
-    staticPublishPath: public
+    buildCommand: "mkdir -p dist && cp index.html dist/index.html && cp -r public/frontend dist/ && cp -r public/backend dist/"
+    staticPublishPath: dist
     routes:
       - type: rewrite
         source: /*
