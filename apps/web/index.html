@@ -251,7 +251,15 @@
 
 <div id="toasts"></div>
 <div id="printArea"></div>
-<script>window.__API_URL__ = '%VITE_API_URL%';</script>
+<script>
+  // API base URL — points to Render backend
+  const API = (function(){
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'http://localhost:3000/api';
+    }
+    return 'https://vendor-apex-api.onrender.com/api';
+  })();
+</script>
 <script src="/backend/data.js"></script>
 <script src="/frontend/js/app.js"></script>
 </body>
