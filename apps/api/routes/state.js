@@ -23,8 +23,8 @@ module.exports = (app, pool, requireAuth) => {
         pool.query('SELECT * FROM quote_items ORDER BY id ASC'),
         pool.query('SELECT * FROM pos ORDER BY id DESC'),
         pool.query('SELECT * FROM invoices ORDER BY id DESC'),
-        pool.query('SELECT id, who, what, c, created_at AS min FROM logs ORDER BY id DESC LIMIT 100'),
-        pool.query('SELECT id, t, created_at AS min FROM notifs ORDER BY id DESC LIMIT 50'),
+        pool.query('SELECT id, who, what, c, min FROM logs ORDER BY id DESC LIMIT 100'),
+        pool.query('SELECT id, t, min FROM notifs ORDER BY id DESC LIMIT 50'),
         pool.query('SELECT * FROM approvals ORDER BY id DESC'),
         pool.query('SELECT id, email, name, role, label, vendor_id FROM accounts ORDER BY id DESC')
       ]);
@@ -68,11 +68,11 @@ module.exports = (app, pool, requireAuth) => {
       const now = Date.now();
       const logs = logsRes.rows.map(l => ({
         id: l.id, who: l.who, what: l.what, c: l.c || '#121212',
-        min: Math.round((now - new Date(l.min || l.created_at).getTime()) / 60000),
+        min: l.min || 0,
       }));
       const notifs = notifsRes.rows.map(n => ({
         id: n.id, t: n.t,
-        min: Math.round((now - new Date(n.min || n.created_at).getTime()) / 60000),
+        min: n.min || 0,
       }));
 
       res.json({
