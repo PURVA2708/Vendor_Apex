@@ -10,7 +10,8 @@ const app = express();
 app.use(cors({
   origin: function (origin, callback) {
     const allowed = [
-      process.env.FRONTEND_URL,          // e.g. https://vendor-apex.vercel.app
+      process.env.FRONTEND_URL,              // set in Render dashboard
+      'https://vendor-apex-web.onrender.com', // hardcoded Render frontend URL
       'http://localhost:5173',
       'http://localhost:4173',
       'http://localhost:3000',
