@@ -267,6 +267,11 @@ function clearFpBoxes(){
   setTimeout(()=>$('fp0')?.focus(),200);
 }
 
+// ── Warmup ping — fires silently on boot to wake Render from cold sleep ────
+(function warmup(){
+  fetch(`${API}/health`, { method:'GET' }).catch(()=>{});
+})();
+
 // ── Session restore on page load ───────────────────────────────────────────
 async function restoreSession(){
   const token = localStorage.getItem('vb_token');
@@ -276,6 +281,26 @@ async function restoreSession(){
     if(r.ok){ const d=await r.json(); enterApp(d.user); }
     else { localStorage.removeItem('vb_token'); }
   } catch(e){ /* server offline — stay on login */ }
+}
+
+// ── Loading overlay helpers ────────────────────────────────────────────────
+function showDbLoader(){
+  let ov=$('db-loader');
+  if(!ov){
+    ov=document.createElement('div'); ov.id='db-loader';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(247,246,242,0.82);backdrop-filter:blur(6px);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;pointer-events:none';
+    ov.innerHTML=`
+      <div style="width:44px;height:44px;border:3px solid #E7E5DE;border-top-color:#121212;border-radius:50%;animation:dbspin .7s linear infinite"></div>
+      <div style="font-size:13px;font-weight:700;letter-spacing:.08em;color:#71706A">LOADING LIVE DATA…</div>
+      <style>@keyframes dbspin{to{transform:rotate(360deg)}}</style>`;
+    document.body.appendChild(ov);
+  }
+  ov.style.opacity='1'; ov.style.pointerEvents='none';
+}
+function hideDbLoader(){
+  const ov=$('db-loader'); if(!ov) return;
+  ov.style.transition='opacity .35s'; ov.style.opacity='0';
+  setTimeout(()=>ov.remove(), 380);
 }
 
 // ── Enter app ──────────────────────────────────────────────────────────────
@@ -294,8 +319,12 @@ function enterApp(user){
   av.style.background=ROLECOLOR[acc.role];
   buildNav(); go('dashboard'); renderNotifs();
   toast(`Signed in as ${acc.name} — ${acc.label}`);
-  // Merge real DB data in background — UI stays instant on demo data
-  loadState().then(() => { buildNav(); go('dashboard'); renderNotifs(); }).catch(()=>{});
+  // Merge real DB data in background — show spinner, keep UI instant on demo data
+  showDbLoader();
+  loadState()
+    .then(() => { buildNav(); go('dashboard'); renderNotifs(); })
+    .catch(()=>{})
+    .finally(()=> hideDbLoader());
 }
 
 // ── Logout ─────────────────────────────────────────────────────────────────

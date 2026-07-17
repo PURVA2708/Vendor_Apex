@@ -25,7 +25,12 @@ app.use(express.json());
 
 
 // ─── PostgreSQL ───────────────────────────────────────────────────────────────
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: 10,                    // limit concurrent connections (Supabase free tier caps at 15)
+  idleTimeoutMillis: 20000,  // release idle connections quickly
+  connectionTimeoutMillis: 5000, // fail fast if connection takes too long
+});
 pool.connect((err, client, release) => {
   if (err) return console.error('DB connect error:', err.stack);
   console.log('✅ PostgreSQL connected');
